@@ -38,15 +38,22 @@ protected:
 
     ~NeoEsp8266Uart();
 
-    void InitializeUart(uint32_t uartBaud);
+    void InitializeUart(uint32_t uartBaud, uint8_t uartNumber);
 
     void UpdateUart();
 
-    static const uint8_t* ICACHE_RAM_ATTR FillUartFifo(const uint8_t* pixels, const uint8_t* end);
+    static const uint8_t* ICACHE_RAM_ATTR FillUartFifo(const uint8_t* pixels, const uint8_t* end, uint8_t uartNumber);
 
     size_t    _sizePixels;   // Size of '_pixels' buffer below
     uint8_t* _pixels;        // Holds LED color values
     uint32_t _startTime;     // Microsecond count when last update started
+};
+
+
+struct UartIntrConfig {
+    uint8_t uartNumber;
+    const uint8_t* esp8266_uart_async_buf;
+    const uint8_t* esp8266_uart_async_buf_end;
 };
 
 // NeoEsp8266AsyncUart handles all transmission asynchronously using interrupts
@@ -65,7 +72,7 @@ protected:
 
     ~NeoEsp8266AsyncUart();
 
-    void InitializeUart(uint32_t uartBaud);
+    void InitializeUart(uint32_t uartBaud, uint8_t uartNumber);
 
     void UpdateUart();
 
@@ -73,6 +80,7 @@ private:
     static void ICACHE_RAM_ATTR IntrHandler(void* param);
 
     uint8_t* _asyncPixels;  // Holds a copy of LED color values taken when UpdateUart began
+    UartIntrConfig _config;
 };
 
 // NeoEsp8266UartSpeedWs2813 contains the timing constants used to get NeoPixelBus running with the Ws2813
@@ -104,7 +112,7 @@ public:
 
 // NeoEsp8266UartMethodBase is a light shell arround NeoEsp8266Uart or NeoEsp8266AsyncUart that
 // implements the methods needed to operate as a NeoPixelBus method.
-template<typename T_SPEED, typename T_BASE>
+template<typename T_SPEED, typename T_BASE, typename T_UART>
 class NeoEsp8266UartMethodBase: public T_BASE
 {
 public:
@@ -125,7 +133,7 @@ public:
 
     void Initialize()
     {
-        this->InitializeUart(T_SPEED::UartBaud);
+        this->InitializeUart(T_SPEED::UartBaud, T_UART::UartNumber);
 
         // Inverting logic levels can generate a phantom bit in the led strip bus
         // We need to delay 50+ microseconds the output stream to force a data
@@ -166,13 +174,38 @@ private:
     };
 };
 
-typedef NeoEsp8266UartMethodBase<NeoEsp8266UartSpeedWs2813, NeoEsp8266Uart> NeoEsp8266UartWs2813Method;
-typedef NeoEsp8266UartMethodBase<NeoEsp8266UartSpeed800Kbps, NeoEsp8266Uart> NeoEsp8266Uart800KbpsMethod;
-typedef NeoEsp8266UartMethodBase<NeoEsp8266UartSpeed400Kbps, NeoEsp8266Uart> NeoEsp8266Uart400KbpsMethod;
+class Uart0
+{
+public:
+    const static uint8_t UartNumber = 0;
+};
 
-typedef NeoEsp8266UartMethodBase<NeoEsp8266UartSpeedWs2813, NeoEsp8266AsyncUart> NeoEsp8266AsyncUartWs2813Method;
-typedef NeoEsp8266UartMethodBase<NeoEsp8266UartSpeed800Kbps, NeoEsp8266AsyncUart> NeoEsp8266AsyncUart800KbpsMethod;
-typedef NeoEsp8266UartMethodBase<NeoEsp8266UartSpeed400Kbps, NeoEsp8266AsyncUart> NeoEsp8266AsyncUart400KbpsMethod;
+class Uart1
+{
+public:
+    const static uint8_t UartNumber = 1;
+};
+
+typedef NeoEsp8266UartMethodBase<NeoEsp8266UartSpeedWs2813, NeoEsp8266Uart, Uart1> NeoEsp8266UartWs2813Method;
+typedef NeoEsp8266UartMethodBase<NeoEsp8266UartSpeed800Kbps, NeoEsp8266Uart, Uart1> NeoEsp8266Uart800KbpsMethod;
+typedef NeoEsp8266UartMethodBase<NeoEsp8266UartSpeed400Kbps, NeoEsp8266Uart, Uart1> NeoEsp8266Uart400KbpsMethod;
+
+typedef NeoEsp8266UartMethodBase<NeoEsp8266UartSpeedWs2813, NeoEsp8266AsyncUart, Uart0> NeoEsp8266AsyncUart0_Ws2813Method;
+typedef NeoEsp8266UartMethodBase<NeoEsp8266UartSpeed800Kbps, NeoEsp8266AsyncUart, Uart0> NeoEsp8266AsyncUart0_800KbpsMethod;
+typedef NeoEsp8266UartMethodBase<NeoEsp8266UartSpeed400Kbps, NeoEsp8266AsyncUart, Uart0> NeoEsp8266AsyncUart0_400KbpsMethod;
+
+typedef NeoEsp8266UartMethodBase<NeoEsp8266UartSpeedWs2813, NeoEsp8266AsyncUart, Uart1> NeoEsp8266AsyncUart1_Ws2813Method;
+typedef NeoEsp8266UartMethodBase<NeoEsp8266UartSpeed800Kbps, NeoEsp8266AsyncUart, Uart1> NeoEsp8266AsyncUart1_800KbpsMethod;
+typedef NeoEsp8266UartMethodBase<NeoEsp8266UartSpeed400Kbps, NeoEsp8266AsyncUart, Uart1> NeoEsp8266AsyncUart1_400KbpsMethod;
+
+typedef NeoEsp8266AsyncUart1_Ws2813Method NeoEsp8266AsyncUartWs2813Method;
+typedef NeoEsp8266AsyncUart1_800KbpsMethod NeoEsp8266AsyncUart800KbpsMethod;
+typedef NeoEsp8266AsyncUart1_400KbpsMethod NeoEsp8266AsyncUart400KbpsMethod;
+
+
+
+
+
 
 #endif
 
