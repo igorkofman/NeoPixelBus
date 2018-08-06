@@ -54,6 +54,7 @@ struct UartIntrConfig {
     uint8_t uartNumber;
     const uint8_t* esp8266_uart_async_buf;
     const uint8_t* esp8266_uart_async_buf_end;
+    size_t micros;
 };
 
 // NeoEsp8266AsyncUart handles all transmission asynchronously using interrupts
@@ -76,9 +77,9 @@ protected:
 
     void UpdateUart();
 
+    static size_t intrMicros;
 private:
     static void ICACHE_RAM_ATTR IntrHandler(void* param);
-
     uint8_t* _asyncPixels;  // Holds a copy of LED color values taken when UpdateUart began
     UartIntrConfig _config;
 };
@@ -164,7 +165,8 @@ public:
 
     size_t getPixelsSize() const
     {
-        return this->_sizePixels;
+        return T_BASE::intrMicros;
+//        return this->_sizePixels;
     };
 
 private:

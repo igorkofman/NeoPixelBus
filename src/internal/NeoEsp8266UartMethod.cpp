@@ -50,13 +50,17 @@ static inline uint8_t getUartTxFifoLength(uint8_t uartNumber)
 
 // Append a byte to the TX FIFO 
 // You must ensure the TX FIFO isn't full
-static inline void enqueue(uint8_t byte, uint8_t uartNumber)
+static inline void enqueue1(uint8_t byte, uint8_t uartNumber)
 {
-    if (uartNumber) {
         U1F = byte;      
-    } else {
+}
+static inline void enqueue0(uint8_t byte, uint8_t uartNumber)
+{
+/*    if (uartNumber) {
+        U1F = byte;      
+    } else {*/
         U0F = byte;      
-    }
+//    }
 }
 
 //static const uint8_t* esp8266_uart1_async_buf;
@@ -131,13 +135,24 @@ const uint8_t* ICACHE_RAM_ATTR NeoEsp8266Uart::FillUartFifo(const uint8_t* pixel
     {
         end = pixels + avail;
     }
-    while (pixels < end)
-    {
-        uint8_t subpix = *pixels++;
-        enqueue(_uartData[(subpix >> 6) & 0x3], uartNumber);
-        enqueue(_uartData[(subpix >> 4) & 0x3], uartNumber);
-        enqueue(_uartData[(subpix >> 2) & 0x3], uartNumber);
-        enqueue(_uartData[ subpix       & 0x3], uartNumber);
+    if (uartNumber) {
+        while (pixels < end)
+        {
+            uint8_t subpix = *pixels++;
+            enqueue1(_uartData[(subpix >> 6) & 0x3], uartNumber);
+            enqueue1(_uartData[(subpix >> 4) & 0x3], uartNumber);
+            enqueue1(_uartData[(subpix >> 2) & 0x3], uartNumber);
+            enqueue1(_uartData[ subpix       & 0x3], uartNumber);
+        }
+    } else {
+        while (pixels < end)
+        {
+            uint8_t subpix = *pixels++;
+            enqueue0(_uartData[(subpix >> 6) & 0x3], uartNumber);
+            enqueue0(_uartData[(subpix >> 4) & 0x3], uartNumber);
+            enqueue0(_uartData[(subpix >> 2) & 0x3], uartNumber);
+            enqueue0(_uartData[ subpix       & 0x3], uartNumber);
+        }
     }
     return pixels;
 }
@@ -158,34 +173,52 @@ NeoEsp8266AsyncUart::~NeoEsp8266AsyncUart()
     free(_asyncPixels);
 }
 
+int installed = 0;
+UartIntrConfig *config0 = 0;
+UartIntrConfig *config1 = 0;
+
 void ICACHE_RAM_ATTR NeoEsp8266AsyncUart::InitializeUart(uint32_t uartBaud, uint8_t uartNumber)
 {
-    NeoEsp8266Uart::InitializeUart(uartBaud, uartNumber);
-
-    // Disable all interrupts
-    ETS_UART_INTR_DISABLE();
-
-    // Clear the RX & TX FIFOS
-    SET_PERI_REG_MASK(UART_CONF0(uartNumber), UART_RXFIFO_RST | UART_TXFIFO_RST);
-    CLEAR_PERI_REG_MASK(UART_CONF0(uartNumber), UART_RXFIFO_RST | UART_TXFIFO_RST);
-
-    // Set the interrupt handler
     _config.uartNumber = uartNumber;
     _config.esp8266_uart_async_buf = 0;
     _config.esp8266_uart_async_buf_end = 0;
-    ETS_UART_INTR_ATTACH(IntrHandler, &_config);
+    if (uartNumber) {
+        config1 = &_config;
+    } else {
+        config0 = &_config;        
+    }
+    if (!installed) {
+        NeoEsp8266Uart::InitializeUart(uartBaud, 0);
+        NeoEsp8266Uart::InitializeUart(uartBaud, 1);
 
-    // Set tx fifo trigger. 80 bytes gives us 200 microsecs to refill the FIFO
-    WRITE_PERI_REG(UART_CONF1(uartNumber), 80 << UART_TXFIFO_EMPTY_THRHD_S);
+        // Disable all interrupts
+        ETS_UART_INTR_DISABLE();
 
-    // Disable RX & TX interrupts. It is enabled by uart.c in the SDK
-    CLEAR_PERI_REG_MASK(UART_INT_ENA(uartNumber), UART_RXFIFO_FULL_INT_ENA | UART_TXFIFO_EMPTY_INT_ENA);
+        // Clear the RX & TX FIFOS
+        SET_PERI_REG_MASK(UART_CONF0(0), UART_RXFIFO_RST | UART_TXFIFO_RST);
+        CLEAR_PERI_REG_MASK(UART_CONF0(0), UART_RXFIFO_RST | UART_TXFIFO_RST);
+        SET_PERI_REG_MASK(UART_CONF0(1), UART_RXFIFO_RST | UART_TXFIFO_RST);
+        CLEAR_PERI_REG_MASK(UART_CONF0(1), UART_RXFIFO_RST | UART_TXFIFO_RST);
 
-    // Clear all pending interrupts
-    WRITE_PERI_REG(UART_INT_CLR(uartNumber), 0xffff);
+        // Set the interrupt handler
+        ETS_UART_INTR_ATTACH(IntrHandler, 0);
 
-    // Reenable interrupts
-    ETS_UART_INTR_ENABLE();
+        // Set tx fifo trigger. 80 bytes gives us 200 microsecs to refill the FIFO
+        WRITE_PERI_REG(UART_CONF1(0), 80 << UART_TXFIFO_EMPTY_THRHD_S);
+        WRITE_PERI_REG(UART_CONF1(1), 80 << UART_TXFIFO_EMPTY_THRHD_S);
+
+        // Disable RX & TX interrupts. It is enabled by uart.c in the SDK
+        CLEAR_PERI_REG_MASK(UART_INT_ENA(0), UART_RXFIFO_FULL_INT_ENA | UART_TXFIFO_EMPTY_INT_ENA);
+        CLEAR_PERI_REG_MASK(UART_INT_ENA(1), UART_RXFIFO_FULL_INT_ENA | UART_TXFIFO_EMPTY_INT_ENA);
+
+        // Clear all pending interrupts
+        WRITE_PERI_REG(UART_INT_CLR(0), 0xffff);
+        WRITE_PERI_REG(UART_INT_CLR(1), 0xffff);
+
+        // Reenable interrupts
+        ETS_UART_INTR_ENABLE();
+    }
+    installed = 1;
 }
 
 void NeoEsp8266AsyncUart::UpdateUart()
@@ -204,13 +237,18 @@ void NeoEsp8266AsyncUart::UpdateUart()
 }
 
 
+size_t NeoEsp8266AsyncUart::intrMicros = 0; 
 void ICACHE_RAM_ATTR NeoEsp8266AsyncUart::IntrHandler(void* param)
 {
-    
-    UartIntrConfig *config = (UartIntrConfig*)param;
+    size_t start = micros();
+
+    UartIntrConfig *config;
+
     // Interrupt handler is shared between UART0 & UART1
-    if (READ_PERI_REG(UART_INT_ST(config->uartNumber)))   //any stuff meant for us
+    if (READ_PERI_REG(UART_INT_ST(UART0)))   // handle UART0
     {
+        config = (UartIntrConfig*)config0;
+
         // Fill the FIFO with new data
         config->esp8266_uart_async_buf = FillUartFifo(config->esp8266_uart_async_buf, config->esp8266_uart_async_buf_end, config->uartNumber);
         // Disable TX interrupt when done
@@ -221,13 +259,27 @@ void ICACHE_RAM_ATTR NeoEsp8266AsyncUart::IntrHandler(void* param)
         // Clear all interrupts flags (just in case)
         WRITE_PERI_REG(UART_INT_CLR(config->uartNumber), 0xffff);
     }
+    if (READ_PERI_REG(UART_INT_ST(UART1)))   // handle UART1
+    {
+        config = (UartIntrConfig*)config1;
 
-    if (READ_PERI_REG(UART_INT_ST(UART0)))
+        // Fill the FIFO with new data
+        config->esp8266_uart_async_buf = FillUartFifo(config->esp8266_uart_async_buf, config->esp8266_uart_async_buf_end, config->uartNumber);
+        // Disable TX interrupt when done
+        if (config->esp8266_uart_async_buf == config->esp8266_uart_async_buf_end)
+        {
+            CLEAR_PERI_REG_MASK(UART_INT_ENA(config->uartNumber), UART_TXFIFO_EMPTY_INT_ENA);
+        }
+        // Clear all interrupts flags (just in case)
+        WRITE_PERI_REG(UART_INT_CLR(config->uartNumber), 0xffff);
+    }
+    NeoEsp8266AsyncUart::intrMicros += (micros() - start); 
+    /*if (READ_PERI_REG(UART_INT_ST(UART0)))
     {
         // TODO: gdbstub uses the interrupt of UART0, but there is no way to call its
         // interrupt handler gdbstub_uart_hdlr since it's static.
         WRITE_PERI_REG(UART_INT_CLR(UART0), 0xffff);
-    }
+    }*/
 }
 
 #endif
