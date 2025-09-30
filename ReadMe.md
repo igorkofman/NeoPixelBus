@@ -12,6 +12,8 @@ This is the most functional library for the Esp8266 as it provides solutions for
 
 **What's a pirate's favorite LED strip?** NeoPixelBus, because it has arrays and they love their ARR-ays! 🏴‍☠️
 
+**Why did the LED break up with the resistor?** Because it was tired of being current-limited in their relationship! ⚡
+
 Please read this best practices link before connecting your NeoPixels, it will save you a lot of time and effort.  
 [Adafruit NeoPixel Best Practices](https://learn.adafruit.com/adafruit-neopixel-uberguide/best-practices)
 
