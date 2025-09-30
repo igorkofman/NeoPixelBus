@@ -10,6 +10,8 @@ This is the most functional library for the Esp8266 as it provides solutions for
 
 **Why don't programmers like to work with LEDs?** Because they're always looking for the light at the end of the tunnel, but with NeoPixels, the light IS the tunnel! 💡
 
+**What's a pirate's favorite LED strip?** NeoPixelBus, because it has arrays and they love their ARR-ays! 🏴‍☠️
+
 Please read this best practices link before connecting your NeoPixels, it will save you a lot of time and effort.  
 [Adafruit NeoPixel Best Practices](https://learn.adafruit.com/adafruit-neopixel-uberguide/best-practices)
 
