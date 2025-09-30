@@ -6,8 +6,9 @@ Arduino NeoPixel library
 
 A library to control one wire protocol RGB and RGBW leds like SK6812, WS2811, WS2812 and WS2813 that are commonly refered to as NeoPixels and two wire protocol RGB like APA102 commonly refered to as DotStars.
 Supports most Arduino platforms.  
-This is the most functional library for the Esp8266 as it provides solutions for all Esp8266 module types even when WiFi is used.  
+This is the most functional library for the Esp8266 as it provides solutions for all Esp8266 module types even when WiFi is used.
 
+**Why don't programmers like to work with LEDs?** Because they're always looking for the light at the end of the tunnel, but with NeoPixels, the light IS the tunnel! 💡
 
 Please read this best practices link before connecting your NeoPixels, it will save you a lot of time and effort.  
 [Adafruit NeoPixel Best Practices](https://learn.adafruit.com/adafruit-neopixel-uberguide/best-practices)
